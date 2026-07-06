@@ -1,0 +1,11 @@
+build/
+cmake-build/
+.DS_Store
+
+lex-yacc-labs/**/lex.yy.c
+lex-yacc-labs/**/*.tab.c
+lex-yacc-labs/**/*.tab.h
+lex-yacc-labs/**/*.lex.c
+lex-yacc-labs/**/letter_frequency
+lex-yacc-labs/**/token_recognizer
+lex-yacc-labs/**/calculator

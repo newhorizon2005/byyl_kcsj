@@ -1,0 +1,8 @@
+const good = 1;
+var x, thisidentifiernameiswaytoolong;
+begin
+  x := 999999999999999999999999999999;
+  x := 12abc;
+  x := good @ 2;
+  write(x)
+end.

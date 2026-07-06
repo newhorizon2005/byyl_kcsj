@@ -1,0 +1,40 @@
+digraph CompilerPipeline {
+  graph [
+    rankdir=LR,
+    bgcolor="white",
+    pad="0.25",
+    nodesep="0.45",
+    ranksep="0.6"
+  ];
+  node [
+    shape=box,
+    style="rounded,filled",
+    color="#8aa0b8",
+    fillcolor="#eef5fb",
+    fontname="PingFang SC",
+    fontsize=16,
+    margin="0.14,0.08"
+  ];
+  edge [
+    color="#56708f",
+    fontname="PingFang SC",
+    fontsize=13
+  ];
+
+  source [label="PL/0 源程序"];
+  lexer [label="词法分析\nLexer"];
+  tokens [label="Token 序列"];
+  parser [label="语法分析\n递归下降 / SLR"];
+  semantic [label="语义分析\n符号表检查"];
+  ir [label="四元式\n中间代码"];
+  target [label="伪目标代码"];
+  runtime [label="解释执行\n运行输出"];
+
+  source -> lexer;
+  lexer -> tokens;
+  tokens -> parser;
+  parser -> semantic;
+  semantic -> ir;
+  ir -> target;
+  target -> runtime;
+}

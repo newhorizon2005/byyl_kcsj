@@ -1,0 +1,12 @@
+const n = 5
+var x, y;
+begin
+  read(x, y;
+  while x < n
+  begin
+    x := x + 1;
+    y := y + x
+  end;
+  if y > 10 then
+    write(y)
+end.

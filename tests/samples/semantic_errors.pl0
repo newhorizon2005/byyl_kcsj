@@ -1,0 +1,16 @@
+const limit = 3, limit = 4;
+var x, x;
+
+procedure worker;
+var local;
+begin
+  local := missVal
+end;
+
+begin
+  read(worker);
+  y := limit + 1;
+  call missProc;
+  call worker;
+  write(y)
+end.

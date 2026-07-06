@@ -1,0 +1,36 @@
+digraph RuntimeFlow {
+  graph [
+    rankdir=TB,
+    bgcolor="white",
+    pad="0.25",
+    nodesep="0.35",
+    ranksep="0.45"
+  ];
+  node [
+    shape=box,
+    style="rounded,filled",
+    color="#9b8a63",
+    fillcolor="#fff7e8",
+    fontname="PingFang SC",
+    fontsize=15,
+    margin="0.14,0.08"
+  ];
+  edge [
+    color="#7d6c49",
+    fontname="PingFang SC",
+    fontsize=12
+  ];
+
+  quads [label="输入：四元式序列"];
+  split [label="划分声明、过程体、主程序"];
+  labels [label="生成标签和目标指令"];
+  jump [label="插入 JMP MAIN\n避免直接执行过程体"];
+  machine [label="目标机解释器\nPC + 变量表 + 返回栈"];
+  io [label="READ / WRITE\n标准输入输出"];
+
+  quads -> split;
+  split -> labels;
+  labels -> jump;
+  jump -> machine;
+  machine -> io;
+}

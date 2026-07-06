@@ -1,0 +1,1255 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PL/0 编译器代码学习笔记</title>
+  <style>
+    :root {
+      --bg: #f7f7f4;
+      --paper: #ffffff;
+      --text: #1f2933;
+      --muted: #5f6b76;
+      --line: #d7ddd8;
+      --green: #1f7a5c;
+      --blue: #2563a9;
+      --red: #b42318;
+      --yellow: #8a6100;
+      --code: #13202b;
+      --code-bg: #eef2f3;
+      --soft-green: #e9f5ef;
+      --soft-blue: #eaf2fb;
+      --soft-yellow: #fff6db;
+      --soft-red: #fdeceb;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      color: var(--text);
+      background: var(--bg);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+        "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      line-height: 1.75;
+    }
+
+    a {
+      color: var(--blue);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr);
+      min-height: 100vh;
+    }
+
+    aside {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow: auto;
+      padding: 24px 20px;
+      border-right: 1px solid var(--line);
+      background: #fbfbf9;
+    }
+
+    aside h2 {
+      margin: 0 0 12px;
+      font-size: 18px;
+    }
+
+    aside p {
+      margin: 0 0 18px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    nav a {
+      display: block;
+      padding: 6px 0;
+      color: #334155;
+      font-size: 14px;
+    }
+
+    main {
+      width: 100%;
+      max-width: 1180px;
+      padding: 36px 48px 72px;
+    }
+
+    h1 {
+      margin: 0 0 12px;
+      font-size: 34px;
+      line-height: 1.25;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      margin: 42px 0 16px;
+      padding-top: 12px;
+      border-top: 1px solid var(--line);
+      font-size: 26px;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin: 28px 0 12px;
+      font-size: 20px;
+      letter-spacing: 0;
+    }
+
+    h4 {
+      margin: 22px 0 8px;
+      font-size: 16px;
+    }
+
+    p {
+      margin: 10px 0;
+    }
+
+    ul,
+    ol {
+      padding-left: 24px;
+    }
+
+    li {
+      margin: 6px 0;
+    }
+
+    code {
+      padding: 2px 5px;
+      border-radius: 4px;
+      color: var(--code);
+      background: var(--code-bg);
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 0.94em;
+    }
+
+    pre {
+      overflow: auto;
+      margin: 12px 0;
+      padding: 16px;
+      border-radius: 8px;
+      color: #e6edf3;
+      background: #0f1720;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 13px;
+      line-height: 1.65;
+    }
+
+    pre code {
+      padding: 0;
+      color: inherit;
+      background: transparent;
+      font-size: inherit;
+    }
+
+    table {
+      width: 100%;
+      margin: 14px 0;
+      border-collapse: collapse;
+      background: var(--paper);
+    }
+
+    th,
+    td {
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: #eef2ef;
+      font-weight: 650;
+    }
+
+    .hero {
+      padding: 28px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--paper);
+    }
+
+    .hero p {
+      max-width: 880px;
+      color: var(--muted);
+      font-size: 16px;
+    }
+
+    .badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 18px;
+    }
+
+    .badge {
+      padding: 5px 9px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #f8faf8;
+      color: #334155;
+      font-size: 13px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      margin: 16px 0;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+      margin: 16px 0;
+    }
+
+    .card {
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--paper);
+    }
+
+    .card h3,
+    .card h4 {
+      margin-top: 0;
+    }
+
+    .note,
+    .warn,
+    .tip {
+      margin: 16px 0;
+      padding: 14px 16px;
+      border-left: 4px solid;
+      border-radius: 6px;
+      background: var(--paper);
+    }
+
+    .note {
+      border-color: var(--blue);
+      background: var(--soft-blue);
+    }
+
+    .tip {
+      border-color: var(--green);
+      background: var(--soft-green);
+    }
+
+    .warn {
+      border-color: var(--yellow);
+      background: var(--soft-yellow);
+    }
+
+    .danger {
+      border-color: var(--red);
+      background: var(--soft-red);
+    }
+
+    .flow {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin: 18px 0;
+    }
+
+    .box {
+      min-width: 130px;
+      padding: 12px 14px;
+      border: 1px solid #b8c5be;
+      border-radius: 8px;
+      background: #ffffff;
+      text-align: center;
+      font-weight: 650;
+    }
+
+    .arrow {
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .mini {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 18px;
+    }
+
+    .step {
+      display: grid;
+      grid-template-columns: 36px minmax(0, 1fr);
+      gap: 12px;
+      margin: 14px 0;
+    }
+
+    .step-num {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--green);
+      color: white;
+      text-align: center;
+      line-height: 32px;
+      font-weight: 700;
+    }
+
+    .token-demo {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 8px;
+      margin: 14px 0;
+    }
+
+    .token {
+      padding: 10px 8px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+      text-align: center;
+    }
+
+    .token strong {
+      display: block;
+      color: var(--green);
+    }
+
+    .kbd {
+      padding: 2px 6px;
+      border: 1px solid #b8c0c8;
+      border-bottom-width: 2px;
+      border-radius: 4px;
+      background: #fff;
+      font-family: inherit;
+      font-size: 0.9em;
+    }
+
+    @media (max-width: 920px) {
+      .layout {
+        display: block;
+      }
+
+      aside {
+        position: static;
+        height: auto;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      main {
+        padding: 24px 18px 48px;
+      }
+
+      .grid,
+      .grid-3,
+      .two-col {
+        grid-template-columns: 1fr;
+      }
+
+      .token-demo {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside>
+      <h2>学习导航</h2>
+      <p>这份 HTML 是给 C++ 和编译原理基础较少的同学看的。建议按顺序读，并配合命令实际运行。</p>
+      <nav>
+        <a href="#goal">0. 先知道你在学什么</a>
+        <a href="#run">1. 先把项目跑起来</a>
+        <a href="#cpp">2. 读本项目需要的 C++ 基础</a>
+        <a href="#structure">3. 项目目录和入口</a>
+        <a href="#token">4. Token 是什么</a>
+        <a href="#lexer">5. 词法分析 Lexer</a>
+        <a href="#parser-ll">6. 递归下降 Parser</a>
+        <a href="#semantic">7. 符号表和语义检查</a>
+        <a href="#ir">8. 四元式生成</a>
+        <a href="#target">9. 目标代码和运行结果</a>
+        <a href="#slr">10. SLR 语法分析</a>
+        <a href="#dot">11. 可视化导出</a>
+        <a href="#tests">12. 测试脚本</a>
+        <a href="#path">13. 推荐学习路径</a>
+        <a href="#qa">14. 自查问题</a>
+      </nav>
+    </aside>
+
+    <main>
+      <section class="hero" id="goal">
+        <h1>PL/0 编译器代码学习笔记</h1>
+        <p>
+          这份笔记的目标是让你能看懂、会运行、能讲清楚本项目代码。它不是报告正文，
+          而是你学习和答辩前理解代码的路线图。
+        </p>
+        <div class="badge-row">
+          <span class="badge">C++17</span>
+          <span class="badge">手写词法分析</span>
+          <span class="badge">递归下降</span>
+          <span class="badge">SLR 分析</span>
+          <span class="badge">符号表</span>
+          <span class="badge">四元式</span>
+          <span class="badge">DOT 可视化</span>
+        </div>
+      </section>
+
+      <h2>0. 先知道你在学什么</h2>
+      <p>
+        编译器可以粗略理解成一个“翻译流水线”：把源代码一步步变成更容易机器处理的形式。
+        这个项目没有生成真正的机器码，而是生成了课程里要求的中间代码，也就是四元式。
+      </p>
+
+      <div class="flow">
+        <div class="box">PL/0 源代码</div>
+        <div class="arrow">→</div>
+        <div class="box">词法分析</div>
+        <div class="arrow">→</div>
+        <div class="box">Token 序列</div>
+        <div class="arrow">→</div>
+        <div class="box">语法分析</div>
+        <div class="arrow">→</div>
+        <div class="box">语义检查</div>
+        <div class="arrow">→</div>
+        <div class="box">四元式</div>
+        <div class="arrow">→</div>
+        <div class="box">目标代码</div>
+        <div class="arrow">→</div>
+        <div class="box">运行输出</div>
+      </div>
+
+      <div class="tip">
+        <strong>学习重点：</strong>不要一开始陷入所有代码细节。先记住每个阶段的输入和输出：
+        词法输入字符串、输出 Token；语法输入 Token、判断结构对不对；语义检查标识符用得对不对；
+        四元式表示程序的中间形式。
+      </div>
+
+      <h2 id="run">1. 先把项目跑起来</h2>
+      <p>先构建项目：</p>
+      <pre><code>cmake -S . -B cmake-build
+cmake --build cmake-build</code></pre>
+
+      <p>运行完整测试：</p>
+      <pre><code>cmake --build cmake-build --target check</code></pre>
+
+      <p>如果你看到类似下面的结果，说明项目能正常工作：</p>
+      <pre><code>100% tests passed, 0 tests failed</code></pre>
+
+      <h3>建议你先运行这四条命令</h3>
+      <div class="grid">
+        <div class="card">
+          <h4>词法分析</h4>
+          <pre><code>./cmake-build/pl0c lex tests/samples/valid_sample.pl0</code></pre>
+          <p class="mini">看源代码如何被切成一个个 Token。</p>
+        </div>
+        <div class="card">
+          <h4>递归下降语法分析</h4>
+          <pre><code>./cmake-build/pl0c parse-ll tests/samples/valid_sample.pl0</code></pre>
+          <p class="mini">正确程序会输出 <code>语法正确</code>。</p>
+        </div>
+        <div class="card">
+          <h4>SLR 语法分析</h4>
+          <pre><code>./cmake-build/pl0c parse-lr tests/samples/valid_sample.pl0</code></pre>
+          <p class="mini">会输出状态栈、符号栈、移进、归约。</p>
+        </div>
+        <div class="card">
+          <h4>语义分析和四元式</h4>
+          <pre><code>./cmake-build/pl0c sem-ll tests/samples/valid_sample.pl0</code></pre>
+          <p class="mini">会输出 <code>语义正确</code>、中间代码和符号表。</p>
+        </div>
+        <div class="card">
+          <h4>目标代码和运行</h4>
+          <pre><code>./cmake-build/pl0c target tests/samples/valid_sample.pl0
+printf '1 3\n' | ./cmake-build/pl0c run tests/samples/valid_sample.pl0</code></pre>
+          <p class="mini">先看伪目标代码，再输入 read 需要的值并查看运行结果。</p>
+        </div>
+      </div>
+
+      <h2 id="cpp">2. 读本项目需要的 C++ 基础</h2>
+      <p>你不需要先成为 C++ 高手。读这个项目时，先掌握下面几个概念就够了。</p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>概念</th>
+            <th>在本项目里的作用</th>
+            <th>例子</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>struct</code></td>
+            <td>把一组相关数据放在一起。</td>
+            <td><code>Token</code>、<code>Symbol</code>、<code>Quad</code></td>
+          </tr>
+          <tr>
+            <td><code>class</code></td>
+            <td>把数据和操作这些数据的函数放在一起。</td>
+            <td><code>Lexer</code>、<code>Parser</code>、<code>SemanticAnalyzer</code></td>
+          </tr>
+          <tr>
+            <td><code>enum class</code></td>
+            <td>定义一组固定类别，避免用数字硬猜。</td>
+            <td><code>TokenType::Identifier</code></td>
+          </tr>
+          <tr>
+            <td><code>std::vector</code></td>
+            <td>动态数组，常用来保存 Token、四元式、状态栈。</td>
+            <td><code>std::vector&lt;Token&gt;</code></td>
+          </tr>
+          <tr>
+            <td><code>std::string</code></td>
+            <td>字符串，保存标识符名、操作符、错误信息。</td>
+            <td><code>token.lexeme</code></td>
+          </tr>
+          <tr>
+            <td><code>std::unordered_map</code></td>
+            <td>哈希表，用于关键字表和符号表。</td>
+            <td><code>keywords_</code>、<code>scopes_</code></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="note">
+        <strong>读代码技巧：</strong>看到 <code>std::vector&lt;Token&gt;</code> 时，把它理解成“Token 列表”。
+        看到 <code>std::unordered_map&lt;std::string, Symbol&gt;</code> 时，把它理解成“名字到符号信息的表”。
+      </div>
+
+      <h2 id="structure">3. 项目目录和入口</h2>
+      <pre><code>src/
+  common/       Token 类型和通用工具
+  lexer/        词法分析器
+  parser/       递归下降分析器和 SLR 分析器
+  semantic/     符号表、语义检查、四元式
+
+tests/
+  samples/      测试用例
+  run_all.sh    批量测试脚本
+
+docs/
+  TASKS.md        任务计划
+  STUDY_NOTES.html  当前学习笔记
+  diagrams/       DOT 可视化文件
+
+lex-yacc-labs/
+  Lex/Yacc 入门实验</code></pre>
+
+      <p>入口文件是：</p>
+      <pre><code>src/main.cpp</code></pre>
+
+      <p><code>main.cpp</code> 的职责是“分发命令”。例如你运行：</p>
+      <pre><code>./cmake-build/pl0c sem-ll tests/samples/valid_sample.pl0</code></pre>
+
+      <p>程序大致会走：</p>
+      <div class="flow">
+        <div class="box">main()</div>
+        <div class="arrow">→</div>
+        <div class="box">读取文件</div>
+        <div class="arrow">→</div>
+        <div class="box">Lexer</div>
+        <div class="arrow">→</div>
+        <div class="box">Parser + Semantic</div>
+        <div class="arrow">→</div>
+        <div class="box">打印四元式</div>
+      </div>
+
+      <h2 id="token">4. Token 是什么</h2>
+      <p>
+        源代码是普通字符串，编译器不好直接理解。词法分析会先把字符串切成 Token。
+        Token 可以理解为“有类型的单词”。
+      </p>
+
+      <h3>例子</h3>
+      <pre><code>const a = 10;</code></pre>
+
+      <p>会被切成：</p>
+      <div class="token-demo">
+        <div class="token"><strong>const</strong>保留字</div>
+        <div class="token"><strong>a</strong>标识符</div>
+        <div class="token"><strong>=</strong>运算符</div>
+        <div class="token"><strong>10</strong>无符号整数</div>
+        <div class="token"><strong>;</strong>界符</div>
+      </div>
+
+      <p>相关代码：</p>
+      <pre><code>src/common/Token.h
+src/common/Token.cpp</code></pre>
+
+      <p>核心结构：</p>
+      <pre><code>struct Token {
+    TokenType type;      // Token 类型
+    std::string lexeme;  // 原始文本
+    int line;            // 行号
+    int column;          // 列号
+    std::string error;   // 词法错误信息
+};</code></pre>
+
+      <h2 id="lexer">5. 词法分析 Lexer</h2>
+      <p>相关代码：</p>
+      <pre><code>src/lexer/Lexer.h
+src/lexer/Lexer.cpp</code></pre>
+
+      <p>入口函数：</p>
+      <pre><code>std::vector&lt;Token&gt; Lexer::tokenize();</code></pre>
+
+      <h3>5.1 Lexer 的整体扫描过程</h3>
+      <div class="flow">
+        <div class="box">当前字符</div>
+        <div class="arrow">→</div>
+        <div class="box">空白/注释？</div>
+        <div class="arrow">→</div>
+        <div class="box">字母？</div>
+        <div class="arrow">→</div>
+        <div class="box">数字？</div>
+        <div class="arrow">→</div>
+        <div class="box">运算符/界符？</div>
+      </div>
+
+      <pre><code>while (!isAtEnd()) {
+    skipWhitespaceAndComments(tokens);
+
+    if (当前字符是字母) {
+        scanIdentifier();
+    } else if (当前字符是数字) {
+        scanNumber();
+    } else {
+        扫描运算符、界符或非法字符;
+    }
+}</code></pre>
+
+      <h3>5.2 标识符和关键字</h3>
+      <p>同样是字母开头，可能是关键字，也可能是普通标识符。</p>
+
+      <pre><code>const a = 10;
+var b;</code></pre>
+
+      <p><code>const</code>、<code>var</code> 是关键字，<code>a</code>、<code>b</code> 是标识符。</p>
+
+      <p>代码里用 <code>keywords_</code> 表判断：</p>
+      <pre><code>{"const", TokenType::Const}
+{"var", TokenType::Var}
+{"procedure", TokenType::Procedure}
+...</code></pre>
+
+      <h3>5.3 数字和非法数字串</h3>
+      <p>课程要求：数字开头后面又接字母，例如 <code>2a</code>，是非法单词。</p>
+
+      <pre><code>const 2a = 10;</code></pre>
+
+      <p>扫描逻辑是：</p>
+      <ol>
+        <li>先读连续数字。</li>
+        <li>如果后面立刻接字母，就继续读完整串。</li>
+        <li>生成 <code>非法字符(串)</code>。</li>
+      </ol>
+
+      <h3>5.4 注释处理</h3>
+      <p>支持两类注释：</p>
+      <pre><code>// 单行注释
+
+/*
+  多行注释
+*/</code></pre>
+
+      <p>注释会被跳过，不会进入 Token 序列。</p>
+
+      <h3>5.5 词法错误</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>错误</th>
+            <th>例子</th>
+            <th>处理方式</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>非法字符</td>
+            <td><code>@</code></td>
+            <td>生成错误 Token，继续扫描。</td>
+          </tr>
+          <tr>
+            <td>非法单词</td>
+            <td><code>12abc</code></td>
+            <td>输出 <code>非法字符(串)</code>。</td>
+          </tr>
+          <tr>
+            <td>标识符过长</td>
+            <td><code>function1</code></td>
+            <td>超过 8 位时报错。</td>
+          </tr>
+          <tr>
+            <td>整数过长</td>
+            <td><code>123456789</code></td>
+            <td>超过 8 位时报错。</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2 id="parser-ll">6. 递归下降 Parser</h2>
+      <p>相关代码：</p>
+      <pre><code>src/parser/Parser.h
+src/parser/Parser.cpp</code></pre>
+
+      <p>入口函数：</p>
+      <pre><code>bool Parser::parseProgram();</code></pre>
+
+      <h3>6.1 什么是递归下降</h3>
+      <p>
+        递归下降就是把文法规则翻译成函数。一个非终结符对应一个函数，
+        函数内部按照文法顺序调用其他函数。
+      </p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>文法单位</th>
+            <th>代码函数</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>程序</td><td><code>parseProgram()</code></td></tr>
+          <tr><td>分程序</td><td><code>parseBlock()</code></td></tr>
+          <tr><td>常量声明</td><td><code>parseConstDecl()</code></td></tr>
+          <tr><td>变量声明</td><td><code>parseVarDecl()</code></td></tr>
+          <tr><td>过程声明</td><td><code>parseProcedureDecl()</code></td></tr>
+          <tr><td>语句</td><td><code>parseStatement()</code></td></tr>
+          <tr><td>条件</td><td><code>parseCondition()</code></td></tr>
+          <tr><td>表达式</td><td><code>parseExpression()</code></td></tr>
+          <tr><td>项</td><td><code>parseTerm()</code></td></tr>
+          <tr><td>因子</td><td><code>parseFactor()</code></td></tr>
+        </tbody>
+      </table>
+
+      <h3>6.2 Parser 如何读 Token</h3>
+      <p>Parser 不是直接读字符，而是读 Lexer 生成的 Token 列表。</p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>函数</th>
+            <th>作用</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><code>current()</code></td><td>查看当前 Token。</td></tr>
+          <tr><td><code>advance()</code></td><td>消费当前 Token，移动到下一个。</td></tr>
+          <tr><td><code>match(type)</code></td><td>如果当前 Token 是指定类型，就消费它。</td></tr>
+          <tr><td><code>expect(type, message)</code></td><td>要求当前 Token 必须是指定类型，否则记录语法错误。</td></tr>
+        </tbody>
+      </table>
+
+      <h3>6.3 表达式为什么拆成三层</h3>
+      <p>为了处理优先级，表达式被拆成：</p>
+      <div class="flow">
+        <div class="box">Expression<br><span class="mini">+ -</span></div>
+        <div class="arrow">→</div>
+        <div class="box">Term<br><span class="mini">* /</span></div>
+        <div class="arrow">→</div>
+        <div class="box">Factor<br><span class="mini">标识符/数字/括号</span></div>
+      </div>
+
+      <p>例如：</p>
+      <pre><code>2 + 3 * 4</code></pre>
+
+      <p>应该先算 <code>3 * 4</code>，再和 <code>2</code> 相加，所以乘除在 <code>parseTerm()</code> 里处理，加减在 <code>parseExpression()</code> 里处理。</p>
+
+      <h3>6.4 语法错误</h3>
+      <p>缺少分号、括号不匹配、缺少 <code>do</code> 等错误，主要通过 <code>expect()</code> 发现。</p>
+
+      <pre><code>while x &lt; 10
+begin
+  x := x + 1
+end</code></pre>
+
+      <p>这里 <code>while</code> 条件后缺少 <code>do</code>，Parser 会报告语法错误行号。</p>
+
+      <h2 id="semantic">7. 符号表和语义检查</h2>
+      <p>相关代码：</p>
+      <pre><code>src/semantic/Semantic.h
+src/semantic/Semantic.cpp</code></pre>
+
+      <p>核心类：</p>
+      <pre><code>class SemanticAnalyzer</code></pre>
+
+      <h3>7.1 什么是语义错误</h3>
+      <p>语法正确不代表程序意思正确。例如：</p>
+
+      <pre><code>const a = 10;
+begin
+  a := 20
+end.</code></pre>
+
+      <p>这段语法结构没问题，但常量不能被赋值，所以是语义错误。</p>
+
+      <h3>7.2 符号表保存什么</h3>
+      <pre><code>struct Symbol {
+    std::string name;   // 名字
+    SymbolKind kind;    // const / var / procedure
+    std::string value;  // 常量值
+    int level;          // 作用域层次
+};</code></pre>
+
+      <p>作用域用一个栈保存：</p>
+      <pre><code>std::vector&lt;std::unordered_map&lt;std::string, Symbol&gt;&gt; scopes_;</code></pre>
+
+      <p>可以简单理解为：</p>
+      <div class="flow">
+        <div class="box">全局作用域</div>
+        <div class="arrow">→</div>
+        <div class="box">过程作用域</div>
+        <div class="arrow">→</div>
+        <div class="box">更内层作用域</div>
+      </div>
+
+      <h3>7.3 当前检查了哪些语义规则</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>函数</th>
+            <th>检查内容</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><code>declare()</code></td><td>同一作用域是否重复声明。</td></tr>
+          <tr><td><code>requireAssignable()</code></td><td>是否可以作为赋值左值。</td></tr>
+          <tr><td><code>requireReadable()</code></td><td><code>read</code> 的参数是否是变量。</td></tr>
+          <tr><td><code>requireCallable()</code></td><td><code>call</code> 的目标是否是过程。</td></tr>
+          <tr><td><code>requireValue()</code></td><td>表达式里的标识符是否能作为值使用。</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="ir">8. 四元式生成</h2>
+      <p>四元式是中间代码，结构是：</p>
+      <pre><code>(op, arg1, arg2, result)</code></pre>
+
+      <p>代码结构：</p>
+      <pre><code>struct Quad {
+    std::string op;
+    std::string arg1;
+    std::string arg2;
+    std::string result;
+};</code></pre>
+
+      <h3>8.1 赋值表达式</h3>
+      <p>源代码：</p>
+      <pre><code>c := b + a</code></pre>
+
+      <p>可能生成：</p>
+      <pre><code>(+, b, a, T1)
+(:=, T1, _, c)</code></pre>
+
+      <p><code>T1</code> 是临时变量，由 <code>newTemp()</code> 生成。</p>
+
+      <h3>8.2 if 的跳转</h3>
+      <p>源代码：</p>
+      <pre><code>if a &lt;= 10 then
+  c := b + a</code></pre>
+
+      <p>实现思路：</p>
+      <ol>
+        <li>先判断条件。</li>
+        <li>如果条件不成立，跳过 then 语句。</li>
+        <li>then 语句解析完成后，回填跳转目标。</li>
+      </ol>
+
+      <h3>8.3 while 的跳转</h3>
+      <p>while 会产生一个回跳：</p>
+      <div class="flow">
+        <div class="box">条件开始</div>
+        <div class="arrow">→</div>
+        <div class="box">条件判断</div>
+        <div class="arrow">→</div>
+        <div class="box">循环体</div>
+        <div class="arrow">↺</div>
+      </div>
+
+      <p>所以四元式中会看到类似：</p>
+      <pre><code>(j&lt;=, y, 0, $21)
+...
+(j, _, _, $16)</code></pre>
+
+      <p>第一条是条件失败跳出，第二条是循环体结束后跳回条件位置。</p>
+
+      <h2 id="target">9. 目标代码和运行结果</h2>
+      <p>相关代码：</p>
+      <pre><code>src/target/TargetCode.h
+src/target/TargetCode.cpp</code></pre>
+
+      <p>
+        四元式已经比源代码更接近机器执行，但它还不是“能直接跑”的程序。
+        本项目新增了一个很小的伪目标代码后端，把四元式翻译成类似汇编的指令，
+        再用解释器执行这些指令。
+      </p>
+
+      <div class="flow">
+        <div class="box">四元式</div>
+        <div class="arrow">→</div>
+        <div class="box">伪目标代码</div>
+        <div class="arrow">→</div>
+        <div class="box">解释执行</div>
+        <div class="arrow">→</div>
+        <div class="box">程序输出</div>
+      </div>
+
+      <h3>9.1 目标代码长什么样</h3>
+      <p>运行：</p>
+      <pre><code>./cmake-build/pl0c target tests/samples/valid_sample.pl0</code></pre>
+
+      <p>会看到类似：</p>
+      <pre><code>0001  L1:    START
+0009         JMP MAIN
+0010  L9:    PROC add
+0011  L10:   ADD sum x T1
+0012  L11:   MOV T1 sum
+0015  L14:   RET
+0023  MAIN:  NOP
+0024  L22:   READ x
+0025  L23:   READ y
+0034  L32:   CALL countdn
+0035  L33:   WRITE sum
+0036  L34:   HALT</code></pre>
+
+      <p>这些目标指令的含义：</p>
+      <table>
+        <thead>
+          <tr>
+            <th>指令</th>
+            <th>含义</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><code>DECL_VAR x</code></td><td>声明变量 <code>x</code>。</td></tr>
+          <tr><td><code>MOV 10 max</code></td><td>把 <code>10</code> 放入 <code>max</code>。</td></tr>
+          <tr><td><code>ADD a b T1</code></td><td>计算 <code>a + b</code>，结果放入 <code>T1</code>。</td></tr>
+          <tr><td><code>JLE y 0 L21</code></td><td>如果 <code>y &lt;= 0</code>，跳转到 <code>L21</code>。</td></tr>
+          <tr><td><code>CALL add</code></td><td>调用过程 <code>add</code>。</td></tr>
+          <tr><td><code>RET</code></td><td>过程返回。</td></tr>
+          <tr><td><code>READ x</code></td><td>从标准输入读取一个整数给 <code>x</code>。</td></tr>
+          <tr><td><code>WRITE sum</code></td><td>输出 <code>sum</code> 的值。</td></tr>
+        </tbody>
+      </table>
+
+      <h3>9.2 为什么有 <code>JMP MAIN</code></h3>
+      <p>
+        四元式里过程体出现在主程序前面。如果直接从上到下执行，会错误地先执行过程体。
+        所以目标代码生成时会先执行全局声明，然后通过 <code>JMP MAIN</code> 跳过过程定义，
+        直接进入主程序。
+      </p>
+
+      <div class="flow">
+        <div class="box">全局声明</div>
+        <div class="arrow">→</div>
+        <div class="box">JMP MAIN</div>
+        <div class="arrow">跳过</div>
+        <div class="box">过程代码</div>
+        <div class="arrow">→</div>
+        <div class="box">MAIN 主程序</div>
+      </div>
+
+      <h3>9.3 怎么看到运行结果</h3>
+      <p>样例程序中有：</p>
+      <pre><code>read(x, y);</code></pre>
+
+      <p>所以运行时要给两个输入值。例如给 <code>x=1</code>、<code>y=3</code>：</p>
+      <pre><code>printf '1 3\n' | ./cmake-build/pl0c run tests/samples/valid_sample.pl0</code></pre>
+
+      <p>输出：</p>
+      <pre><code>3
+2
+1
+21</code></pre>
+
+      <p>
+        前三行来自过程 <code>countdn</code>，它从 <code>y=3</code> 开始倒着输出到 1。
+        最后一行 <code>21</code> 是主程序最后输出的 <code>sum</code>。
+      </p>
+
+      <h3>9.4 解释器内部做了什么</h3>
+      <p>解释器维护几类数据：</p>
+      <table>
+        <thead>
+          <tr>
+            <th>数据</th>
+            <th>作用</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>变量表</td><td>保存变量、常量和临时变量的整数值。</td></tr>
+          <tr><td>标签表</td><td>把 <code>L16</code>、<code>MAIN</code> 这样的标签映射到目标指令位置。</td></tr>
+          <tr><td>过程表</td><td>把过程名映射到 <code>PROC</code> 指令位置。</td></tr>
+          <tr><td>返回栈</td><td><code>CALL</code> 时记录返回位置，<code>RET</code> 时跳回。</td></tr>
+          <tr><td>程序计数器</td><td>当前正在执行哪一条目标指令。</td></tr>
+        </tbody>
+      </table>
+
+      <div class="tip">
+        <strong>这部分答辩很好讲：</strong>四元式是中间代码，目标代码是更接近执行的指令序列。
+        本项目用一个小型解释器执行目标代码，因此可以直接看到 PL/0 程序的运行输出。
+      </div>
+
+      <h2 id="slr">10. SLR 语法分析</h2>
+      <p>相关代码：</p>
+      <pre><code>src/parser/SLRParser.h
+src/parser/SLRParser.cpp</code></pre>
+
+      <h3>9.1 SLR 和递归下降有什么区别</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>分析方法</th>
+            <th>理解方式</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>递归下降</td>
+            <td>从开始符号出发，按照文法函数向下匹配。</td>
+          </tr>
+          <tr>
+            <td>SLR</td>
+            <td>从输入 Token 出发，用状态栈不断移进和归约。</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>9.2 产生式</h3>
+      <p>SLR 的文法写在：</p>
+      <pre><code>std::vector&lt;Production&gt; makeProductions();</code></pre>
+
+      <p>例如：</p>
+      <pre><code>{"Statement", {"while", "Condition", "do", "Statement"}}</code></pre>
+
+      <p>表示：</p>
+      <pre><code>Statement -> while Condition do Statement</code></pre>
+
+      <h3>9.3 项目和点</h3>
+      <p>LR 项目里有一个点 <code>·</code>，表示当前读到了产生式的哪个位置。</p>
+
+      <pre><code>Statement -> while · Condition do Statement</code></pre>
+
+      <p>意思是：已经读到了 <code>while</code>，接下来希望看到 <code>Condition</code>。</p>
+
+      <h3>9.4 closure 和 goto</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>函数</th>
+            <th>作用</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>closure()</code></td>
+            <td>如果点后面是非终结符，就把它的产生式都加入项目集。</td>
+          </tr>
+          <tr>
+            <td><code>gotoItems()</code></td>
+            <td>项目集读入一个符号后，点向后移动，再求闭包。</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>9.5 移进和归约</h3>
+      <p>SLR 运行时维护两个栈：</p>
+      <pre><code>状态栈 stateStack
+符号栈 symbolStack</code></pre>
+
+      <p>每一步查 ACTION 表：</p>
+      <table>
+        <thead>
+          <tr>
+            <th>动作</th>
+            <th>含义</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>移进 Shift</td><td>读入一个 Token，进入新状态。</td></tr>
+          <tr><td>归约 Reduce</td><td>用某个产生式把栈顶符号归约成非终结符。</td></tr>
+          <tr><td>接受 Accept</td><td>分析完成，语法正确。</td></tr>
+        </tbody>
+      </table>
+
+      <div class="warn">
+        <strong>初学者注意：</strong>SLR 比递归下降抽象很多。你不需要一次性背下所有项目集。
+        先能讲清楚“状态栈 + 输入符号查表，决定移进或归约”即可。
+      </div>
+
+      <h2 id="dot">11. 可视化导出</h2>
+      <h3>11.1 SLR 状态图</h3>
+      <p>命令：</p>
+      <pre><code>./cmake-build/pl0c lr-dot tests/samples/valid_sample.pl0 > docs/diagrams/slr_states.dot</code></pre>
+
+      <p>每个节点是一个项目集，例如 <code>I0</code>、<code>I1</code>。每条边表示读入某个符号后转移到另一个项目集。</p>
+
+      <h3>11.2 四元式控制流图</h3>
+      <p>命令：</p>
+      <pre><code>./cmake-build/pl0c ir-dot tests/samples/valid_sample.pl0 > docs/diagrams/ir_cfg.dot</code></pre>
+
+      <p>边的含义：</p>
+      <ul>
+        <li>普通四元式：连到下一条。</li>
+        <li><code>j</code>：无条件跳转，只连到目标。</li>
+        <li><code>j&lt;rop&gt;</code>：条件跳转，连到目标，也连到下一条。</li>
+      </ul>
+
+      <h2 id="tests">12. 测试脚本</h2>
+      <p>测试脚本：</p>
+      <pre><code>tests/run_all.sh</code></pre>
+
+      <p>运行：</p>
+      <pre><code>tests/run_all.sh</code></pre>
+
+      <p>它会检查这些功能：</p>
+      <ul>
+        <li><code>lex</code> 正确样例和词法错误样例</li>
+        <li><code>parse-ll</code> 正确样例和语法错误样例</li>
+        <li><code>sem-ll</code> 正确样例和语义错误样例</li>
+        <li><code>sem-lr</code> 正确样例</li>
+        <li><code>parse-lr</code> 正确样例</li>
+        <li><code>lr-dot</code> 和 <code>ir-dot</code></li>
+        <li><code>target</code> 和 <code>run</code></li>
+      </ul>
+
+      <h2 id="path">13. 推荐学习路径</h2>
+      <div class="step">
+        <div class="step-num">1</div>
+        <div>
+          <strong>先跑命令。</strong>
+          <p>先运行 <code>lex</code>、<code>parse-ll</code>、<code>sem-ll</code>，不要急着看代码。</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div>
+          <strong>看 <code>main.cpp</code>。</strong>
+          <p>理解不同命令分别调用哪个函数。</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div>
+          <strong>看 Token 和 Lexer。</strong>
+          <p>理解源代码如何变成 Token。</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div>
+          <strong>看递归下降 Parser。</strong>
+          <p>重点看 <code>parseStatement()</code>、<code>parseExpression()</code>、<code>parseFactor()</code>。</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">5</div>
+        <div>
+          <strong>看 SemanticAnalyzer。</strong>
+          <p>理解符号表如何声明、查找和报错。</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">6</div>
+        <div>
+          <strong>回到 Parser 看四元式。</strong>
+          <p>表达式、if、while 的四元式生成都在递归下降过程中完成。</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">7</div>
+        <div>
+          <strong>看目标代码模块。</strong>
+          <p>理解四元式如何变成伪目标代码，以及解释器如何执行。</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">8</div>
+        <div>
+          <strong>最后看 SLRParser。</strong>
+          <p>先看概念，再看代码。SLR 是最抽象的部分，不建议一开始就啃。</p>
+        </div>
+      </div>
+
+      <h2 id="qa">14. 自查问题</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>词法分析</h3>
+          <ul>
+            <li>关键字和标识符怎么区分？</li>
+            <li><code>2a</code> 为什么是非法单词？</li>
+            <li>注释为什么不会进入 Token 序列？</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>语法分析</h3>
+          <ul>
+            <li>为什么表达式要拆成 expression、term、factor？</li>
+            <li><code>begin ... end</code> 如何解析多条语句？</li>
+            <li><code>expect()</code> 在哪里报错？</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>语义分析</h3>
+          <ul>
+            <li>符号表为什么要分作用域？</li>
+            <li>重复声明在哪里检查？</li>
+            <li><code>read(p)</code> 为什么可能是错的？</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>四元式</h3>
+          <ul>
+            <li><code>T1</code> 是什么时候生成的？</li>
+            <li><code>while</code> 为什么会产生回跳？</li>
+            <li>跳转目标为什么需要回填？</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>目标代码</h3>
+          <ul>
+            <li><code>JMP MAIN</code> 为什么需要？</li>
+            <li><code>CALL</code> 和 <code>RET</code> 如何配合？</li>
+            <li><code>read</code> 的输入值从哪里来？</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>SLR</h3>
+          <ul>
+            <li>项目里的点 <code>·</code> 表示什么？</li>
+            <li><code>closure</code> 和 <code>goto</code> 分别做什么？</li>
+            <li>移进和归约如何改变状态栈？</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>答辩重点</h3>
+          <ul>
+            <li><code>sem-lr</code> 先做 SLR 语法检查，再进入统一语义生成流程。</li>
+            <li>错误样例可以展示词法、语法、语义三类诊断。</li>
+            <li>目标代码模块可以展示 <code>target</code> 生成和 <code>run</code> 解释执行。</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="note">
+        <strong>最后建议：</strong>你真正需要讲清楚的是“输入是什么、输出是什么、核心数据结构是什么、错误怎么处理”。
+        对每个模块都按这四个问题准备，答辩会稳很多。
+      </div>
+    </main>
+  </div>
+</body>
+</html>

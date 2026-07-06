@@ -1,0 +1,31 @@
+const max = 10, step = 1;
+var x, y, sum;
+
+procedure add;
+begin
+  sum := sum + x;
+  x := x + step
+end;
+
+procedure countdn;
+begin
+  while y > 0 do
+  begin
+    write(y);
+    y := y - 1
+  end
+end;
+
+begin
+  read(x, y);
+  sum := 0;
+  if odd x then
+    call add;
+  while x < max do
+  begin
+    call add;
+    x := x + step
+  end;
+  call countdn;
+  write(sum)
+end.
